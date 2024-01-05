@@ -1,51 +1,45 @@
 package com.riffs.listnr;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import com.riffs.listnr.domain.Albums;
-import com.riffs.listnr.domain.AlbumRepository;
+import org.springframework.context.annotation.Bean;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+import com.riffs.listnr.domain.User;
+import com.riffs.listnr.service.UserService;
 
 @SpringBootApplication
-public class ListnrApplication implements CommandLineRunner {
-	private static final Logger logger = LoggerFactory.getLogger(ListnrApplication.class);
-
-	private final AlbumRepository repository;
-
-	public ListnrApplication(AlbumRepository repository) {
-		this.repository = repository;
-	}
+public class ListnrApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(ListnrApplication.class, args);
 	}
 
-	@Override
-	public void run(String... args) throws Exception {
-		repository.save(new Albums(
-				"Permission To Land",
-				"The Darkness",
-				"https://media.pitchfork.com/photos/64a61949cf2fafdbddfaebbb/master/pass/The-Darkness-Permission-to-Land.jpg",
-				2003));
-
-		repository.save(new Albums(
-				"Black Album",
-				"Metallica",
-				"https://townsquare.media/site/295/files/2016/08/metallica-blackalbum.jpg?w=1200&h=0&zc=1&s=0&a=t&q=89",
-				1991));
-
-		repository.save(new Albums(
-				"Images and Words",
-				"Dreamtheater",
-				"https://m.media-amazon.com/images/W/MEDIAX_792452-T2/images/I/91peiIHOUTL._UF1000,1000_QL80_.jpg",
-				1992));
-
-		for (Albums albums : repository.findAll()) {
-			logger.info("album: {}, artist, {}",
-					albums.getName(), albums.getArtist());
-		}
-
+	@Bean
+	CommandLineRunner runner(UserService userService) {
+		return args -> {
+			// read json and write to db
+			ObjectMapper mapper = new ObjectMapper();
+			mapper.registerModule(new ParameterNamesModule());
+			TypeReference<List<User>> typeReference = new TypeReference<List<User>>() {
+			};
+			InputStream inputStream = TypeReference.class.getResourceAsStream("/JSON/personData.json");
+			try {
+				List<User> users = mapper.readValue(inputStream, typeReference);
+				System.out.println(users);
+				userService.save(users);
+				System.out.println("Users Saved");
+			} catch (IOException e) {
+				System.out.println("Unable to save users: " + e.getMessage());
+			}
+		};
 	}
+
 }
